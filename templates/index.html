@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CNC Milling Machine — Digital Twin</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <header>
+    <div class="header-badge">Digital Twin</div>
+    <h1>CNC Milling Machine</h1>
+    <p class="header-sub">
+      AI-powered prediction using XGBoost &mdash;
+      NED University of Engineering &amp; Technology
+    </p>
+  </header>
+
+  <main>
+
+    <!-- ── INPUT FORM ─────────────────────────────────── -->
+    <div class="card">
+      <div class="card-title">
+        <span class="dot"></span>
+        Enter Machining Parameters
+      </div>
+
+      <form method="POST" autocomplete="off">
+        <div class="form-grid">
+
+          <div class="input-group">
+            <label for="feed_rate">Feed Rate</label>
+            <div class="input-wrap">
+              <input type="number" id="feed_rate" name="feed_rate"
+                placeholder="e.g. 800" step="any" min="200" max="2000" required>
+              <span class="unit">mm/min</span>
+            </div>
+            <div class="hint">Range: 200 – 2000</div>
+          </div>
+
+          <div class="input-group">
+            <label for="spindle_speed">Spindle Speed</label>
+            <div class="input-wrap">
+              <input type="number" id="spindle_speed" name="spindle_speed"
+                placeholder="e.g. 2500" step="any" min="1000" max="4000" required>
+              <span class="unit">rpm</span>
+            </div>
+            <div class="hint">Range: 1000 – 4000</div>
+          </div>
+
+          <div class="input-group">
+            <label for="depth_of_cut">Depth of Cut</label>
+            <div class="input-wrap">
+              <input type="number" id="depth_of_cut" name="depth_of_cut"
+                placeholder="e.g. 1.5" step="any" min="0.5" max="3.5" required>
+              <span class="unit">mm</span>
+            </div>
+            <div class="hint">Range: 0.5 – 3.5</div>
+          </div>
+
+          <div class="input-group">
+            <label for="width_of_cut">Width of Cut</label>
+            <div class="input-wrap">
+              <input type="number" id="width_of_cut" name="width_of_cut"
+                placeholder="e.g. 0.8" step="any" min="0.2" max="1.4" required>
+              <span class="unit">mm</span>
+            </div>
+            <div class="hint">Range: 0.2 – 1.4</div>
+          </div>
+
+          <div class="input-group">
+            <label for="cutting_direction">Cutting Direction</label>
+            <div class="input-wrap select-wrap">
+              <select id="cutting_direction" name="cutting_direction">
+                <option value="Down">Down milling</option>
+                <option value="Up">Up milling</option>
+              </select>
+              <span class="select-arrow">▾</span>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="coolant">Coolant</label>
+            <div class="input-wrap select-wrap">
+              <select id="coolant" name="coolant">
+                <option value="On">On</option>
+                <option value="Off">Off</option>
+              </select>
+              <span class="select-arrow">▾</span>
+            </div>
+          </div>
+
+        </div><!-- /form-grid -->
+
+        <button type="submit" class="predict-btn">
+          <span class="btn-icon">⚙</span>
+          Run Prediction
+        </button>
+      </form>
+    </div>
+
+
+    <!-- ── ERROR ──────────────────────────────────────── -->
+    {% if error_message %}
+    <div class="error-box">
+      <strong>Error:</strong> {{ error_message }}
+    </div>
+    {% endif %}
+
+
+    <!-- ── RESULTS ────────────────────────────────────── -->
+    {% if roughness_pred is not none %}
+    <div class="results-section">
+
+      <div class="results-title">Predicted Outputs</div>
+
+      <div class="results-grid">
+
+        <!-- Surface Roughness -->
+        <div class="result-card">
+          <div class="result-icon">◈</div>
+          <div class="result-label">Surface Roughness</div>
+          <div class="result-value">
+            {{ roughness_pred }}<span class="result-unit">μm</span>
+          </div>
+          <div class="result-sub">Ra value — lower is smoother</div>
+          <div class="result-bar-wrap">
+            <div class="result-bar ra-bar"
+              style="width:{{ [[roughness_pred / 8.0 * 100, 5]|max, 100]|min }}%">
+            </div>
+          </div>
+          <div class="result-scale"><span>0 μm (smooth)</span><span>8 μm (rough)</span></div>
+        </div>
+
+        <!-- Average Power -->
+        <div class="result-card">
+          <div class="result-icon">⚡</div>
+          <div class="result-label">Average Power Required</div>
+          <div class="result-value">
+            {{ power_pred }}<span class="result-unit">W</span>
+          </div>
+          <div class="result-sub">Spindle power consumption</div>
+          <div class="result-bar-wrap">
+            <div class="result-bar pw-bar"
+              style="width:{{ [[power_pred / 600.0 * 100, 5]|max, 100]|min }}%">
+            </div>
+          </div>
+          <div class="result-scale"><span>0 W</span><span>600 W (max)</span></div>
+        </div>
+
+        <!-- Tool Wear -->
+        <div class="result-card full-result">
+          <div class="result-icon">🔧</div>
+          <div class="result-label">Estimated Tool Wear</div>
+          <div class="result-value">
+            {{ wear_pred }}<span class="result-unit">mm</span>
+          </div>
+          <div class="result-sub">Flank wear estimate</div>
+          <div class="result-bar-wrap">
+            <div class="result-bar tw-bar"
+              style="width:{{ [[wear_pred / 0.12 * 100, 5]|max, 100]|min }}%">
+            </div>
+          </div>
+          <div class="result-scale"><span>0 mm (new)</span><span>0.12 mm (replace)</span></div>
+        </div>
+
+      </div><!-- /results-grid -->
+
+      <div class="interpretation">
+        <strong>How to read:</strong>
+        Ra below 1.5 μm = smooth finish for precision parts.
+        Ra above 3.0 μm = rough surface — reduce feed rate or enable coolant.
+        Tool wear above 0.10 mm = consider replacing the cutting tool.
+      </div>
+
+    </div>
+    {% endif %}
+
+  </main>
+
+  <footer>
+    <p>
+      Final Year Project &mdash; NED University of Engineering &amp; Technology
+      &nbsp;&middot;&nbsp; Industrial &amp; Manufacturing Engineering
+    </p>
+  </footer>
+
+</body>
+</html>
