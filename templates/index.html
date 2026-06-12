@@ -110,7 +110,7 @@
 
 
     <!-- ── RESULTS ────────────────────────────────────── -->
-    {% if roughness_pred is not none %}
+    {% if roughness_pred is defined and roughness_pred is not none %}
     <div class="results-section">
 
       <div class="results-title">Predicted Outputs</div>
